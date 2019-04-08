@@ -291,6 +291,48 @@ class Tar extends Archive
     }
 
     /**
+     * @param string $dir path to the original dir
+     * @param string $as the name to us in archive (string), empty to use original path
+     *
+     * @throws ArchiveCorruptedException
+     * @throws ArchiveIOException
+     * @throws FileInfoException
+     */
+    public function addDir($dir, $as = null) {
+        if(!is_dir ($dir)) {
+            throw new ArchiveIOException('Not a directory: '.$dir);
+        }
+
+        if(!is_readable($dir)) {
+            throw new ArchiveIOException('Could not open directory for reading: '.$dir);
+        }
+
+        // normalize file path
+        $dir = realpath($dir);
+
+        // iterate over dir recusively
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir)
+        );
+        foreach ($iterator as $file) {
+            // only add file, not dirs
+            if ($file->isDir()){
+                continue;
+            }
+
+            // Add file. Replace part of the file path if $as is given
+            if(is_null($as)) {
+                $this->addFile($file->getPathname());
+            } else {
+                $this->addFile(
+                    $file->getPathname(),
+                    str_replace($dir, $as, $file->getPathname())
+                );
+            }
+        }
+    }
+
+    /**
      * Add a file to the current TAR archive using the given $data as content
      *
      * @param string|FileInfo $fileinfo either the name to us in archive (string) or a FileInfo oject with all meta data
